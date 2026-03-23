@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deriváty uhlovodíků - hra</title>
+<style>
+body { font-family: Arial, sans-serif; margin: 0; padding: 20px; text-align: center; }
+.container { max-width: 720px; margin: auto; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+button { padding: 15px; font-size: 16px; border: none; border-radius: 10px; cursor: pointer; }
+.correct { background-color: #4CAF50; color: white; }
+.wrong { background-color: #f44336; color: white; }
+#nextBtn { margin-top: 20px; display: none; padding: 12px; width: 100%; }
+@media (max-width: 500px){ .grid{ grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Deriváty uhlovodíků</h1>
+  <h2 id="formula"></h2>
+  <div id="answers" class="grid"></div>
+  <button id="nextBtn" onclick="nextQuestion()">Další</button>
+</div>
+
+<script>
+const groups = [
+  "halogenderiváty",
+  "hydroxyderiváty",
+  "nitrosloučeniny",
+  "aminy",
+  "ethery",
+  "aldehydy",
+  "ketony",
+  "karboxylové kyseliny"
+];
+
+// 30 vzorců – rozepsané (žádné zkratky typu C2H5)
+const allQuestions = [
+  // halogenderiváty
+  {f:"CH3-CH2-Cl", c:"halogenderiváty"},
+  {f:"CH3-Cl", c:"halogenderiváty"},
+  {f:"CH3-CH2-CH2-Br", c:"halogenderiváty"},
+  {f:"CH3-CH2-F", c:"halogenderiváty"},
+
+  // hydroxyderiváty
+  {f:"CH3-OH", c:"hydroxyderiváty"},
+  {f:"CH3-CH2-OH", c:"hydroxyderiváty"},
+  {f:"CH3-CH2-CH2-OH", c:"hydroxyderiváty"},
+  {f:"C6H5-OH", c:"hydroxyderiváty"},
+
+  // nitrosloučeniny
+  {f:"CH3-NO2", c:"nitrosloučeniny"},
+  {f:"CH3-CH2-NO2", c:"nitrosloučeniny"},
+  {f:"CH3-CH2-CH2-NO2", c:"nitrosloučeniny"},
+  {f:"C6H5-NO2", c:"nitrosloučeniny"},
+
+  // aminy
+  {f:"CH3-NH2", c:"aminy"},
+  {f:"CH3-CH2-NH2", c:"aminy"},
+  {f:"CH3-CH2-CH2-NH2", c:"aminy"},
+  {f:"CH3-NH-CH3", c:"aminy"},
+
+  // ethery
+  {f:"CH3-O-CH3", c:"ethery"},
+  {f:"CH3-CH2-O-CH2-CH3", c:"ethery"},
+  {f:"CH3-O-CH2-CH3", c:"ethery"},
+  {f:"CH3-CH2-CH2-O-CH2-CH3", c:"ethery"},
+
+  // aldehydy
+  {f:"CH3-CHO", c:"aldehydy"},
+  {f:"CH3-CH2-CHO", c:"aldehydy"},
+  {f:"CH3-CH2-CH2-CHO", c:"aldehydy"},
+  {f:"C6H5-CHO", c:"aldehydy"},
+
+  // ketony
+  {f:"CH3-CO-CH3", c:"ketony"},
+  {f:"CH3-CH2-CO-CH2-CH3", c:"ketony"},
+  {f:"CH3-CO-CH2-CH3", c:"ketony"},
+
+  // karboxylové kyseliny
+  {f:"CH3-COOH", c:"karboxylové kyseliny"},
+  {f:"CH3-CH2-COOH", c:"karboxylové kyseliny"},
+  {f:"C6H5-COOH", c:"karboxylové kyseliny"}
+];
+
+let usedQuestions = [];
+let selectedQuestions = [];
+let current = 0;
+let results = [];
+
+function toSubscript(str){ return str.replace(/(\d+)/g, d => `<sub>${d}</sub>`); }
+function shuffle(a){ return a.sort(()=>Math.random()-0.5); }
+
+function pickQuestions(){
+  let pool = allQuestions.filter(q => !usedQuestions.includes(q));
+  let result = [];
+
+  groups.forEach(g => {
+    const candidates = pool.filter(q => q.c === g);
+    if(candidates.length){
+      const pick = candidates[Math.floor(Math.random()*candidates.length)];
+      result.push(pick);
+      pool = pool.filter(q => q !== pick);
+    }
+  });
+
+  result = result.concat(shuffle(pool).slice(0, 10 - result.length));
+  usedQuestions = usedQuestions.concat(result);
+  return shuffle(result);
+}
+
+function startGame(){
+  if(allQuestions.length - usedQuestions.length < 10){ usedQuestions = []; }
+
+  selectedQuestions = pickQuestions();
+  current = 0;
+  results = [];
+
+  document.querySelector('.container').innerHTML = `
+    <h1>Deriváty uhlovodíků</h1>
+    <h2 id="formula"></h2>
+    <div id="answers" class="grid"></div>
+    <button id="nextBtn" onclick="nextQuestion()">Další</button>
+  `;
+
+  showQuestion();
+}
+
+function showQuestion(){
+  const q = selectedQuestions[current];
+  document.getElementById('formula').innerHTML = toSubscript(q.f);
+
+  const answersDiv = document.getElementById('answers');
+  answersDiv.innerHTML = '';
+  document.getElementById('nextBtn').style.display = 'none';
+
+  shuffle([...groups]).forEach(opt => {
+    const btn = document.createElement('button');
+    btn.innerHTML = opt;
+    btn.onclick = () => checkAnswer(btn, opt);
+    answersDiv.appendChild(btn);
+  });
+}
+
+function checkAnswer(button, answer){
+  const correct = selectedQuestions[current].c;
+  const buttons = document.querySelectorAll('#answers button');
+  buttons.forEach(b => b.disabled = true);
+
+  if(answer === correct){
+    button.classList.add('correct');
+    results.push({f:selectedQuestions[current].f, c:correct, ok:true});
+  } else {
+    button.classList.add('wrong');
+    results.push({f:selectedQuestions[current].f, c:correct, ok:false});
+    buttons.forEach(b => { if(b.textContent === correct) b.classList.add('correct'); });
+  }
+
+  document.getElementById('nextBtn').style.display = 'block';
+}
+
+function nextQuestion(){
+  current++;
+  if(current < 10) showQuestion();
+  else showResults();
+}
+
+function showResults(){
+  let html = '<h1>Výsledky</h1>';
+  results.forEach(r => {
+    html += `<p>${toSubscript(r.f)} – ${r.ok ? '✔️' : '❌'} (${r.c})</p>`;
+  });
+  html += '<button onclick="startGame()">Zkus znovu</button>';
+  document.querySelector('.container').innerHTML = html;
+}
+
+startGame();
+</script>
+</body>
+</html>
